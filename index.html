@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thói Quen Hằng Ngày</title>
+
+<style>
+:root{
+    --bg:#0f172a;
+    --card:#1e293b;
+    --text:#f8fafc;
+    --accent:#14b8a6;
+    --muted:#94a3b8;
+}
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+body{
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding:20px;
+    max-width:700px;
+    margin:auto;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+.card{
+    background:var(--card);
+    border-radius:16px;
+    padding:16px;
+    margin-bottom:15px;
+}
+
+.habit{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 0;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+}
+
+.habit:last-child{
+    border-bottom:none;
+}
+
+label{
+    flex:1;
+    margin-left:10px;
+}
+
+input[type="checkbox"]{
+    width:22px;
+    height:22px;
+}
+
+.progress{
+    text-align:center;
+    font-size:22px;
+    font-weight:bold;
+    color:var(--accent);
+}
+
+.streak{
+    color:#f59e0b;
+    font-size:14px;
+}
+
+.bar{
+    height:22px;
+    background:#334155;
+    border-radius:12px;
+    overflow:hidden;
+    margin-top:6px;
+}
+
+.fill{
+    height:100%;
+    background:var(--accent);
+}
+
+.footer{
+    text-align:center;
+    margin-top:25px;
+    color:var(--muted);
+    font-size:13px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>📈 Theo Dõi Thói Quen</h1>
+
+<div class="card">
+    <div class="progress" id="todayProgress">0/5</div>
+</div>
+
+<div class="card" id="habitList"></div>
+
+<div class="card">
+    <h2>🔥 Chuỗi ngày liên tiếp</h2>
+    <div id="streaks"></div>
+</div>
+
+<div class="card">
+    <h2>📊 Hoàn thành 7 ngày gần nhất</h2>
+    <div id="weekly"></div>
+</div>
+
+<div class="footer">
+    Dữ liệu được lưu trực tiếp trên iPhone
+</div>
+
+<script>
+
+const habits = [
+"Uống 2 lít nước",
+"Tập thể dục 30 phút",
+"Đọc sách",
+"Thiền",
+"Không lướt điện thoại sau 22h"
+];
+
+const today = new Date().toISOString().slice(0,10);
+
+let data =
+JSON.parse(localStorage.getItem("habitData") || "{}");
+
+if(!data[today]){
+    data[today] = {};
+}
+
+function save(){
+    localStorage.setItem(
+        "habitData",
+        JSON.stringify(data)
+    );
+}
+
+function streak(habit){
+
+    let count = 0;
+
+    let date = new Date();
+
+    while(true){
+
+        const key =
+        date.toISOString().slice(0,10);
+
+        if(
+            data[key] &&
+            data[key][habit]
+        ){
+            count++;
+        }else{
+            break;
+        }
+
+        date.setDate(date.getDate()-1);
+    }
+
+    return count;
+}
+
+function weeklyPercent(habit){
+
+    let done = 0;
+
+    for(let i=0;i<7;i++){
+
+        const d = new Date();
+        d.setDate(d.getDate()-i);
+
+        const key =
+        d.toISOString().slice(0,10);
+
+        if(
+            data[key] &&
+            data[key][habit]
+        ){
+            done++;
+        }
+    }
+
+    return Math.round(done/7*100);
+}
+
+function render(){
+
+    const list =
+    document.getElementById("habitList");
+
+    list.innerHTML="";
+
+    let completed=0;
+
+    habits.forEach(habit=>{
+
+        const checked =
+        data[today][habit] || false;
+
+        if(checked) completed++;
+
+        const row =
+        document.createElement("div");
+
+        row.className="habit";
+
+        row.innerHTML=`
+        <input type="checkbox"
+               ${checked?"checked":""}>
+        <label>${habit}</label>
+        `;
+
+        row.querySelector("input")
+        .addEventListener("change",(e)=>{
+
+            data[today][habit] =
+            e.target.checked;
+
+            save();
+            render();
+        });
+
+        list.appendChild(row);
+    });
+
+    document.getElementById(
+    "todayProgress"
+    ).textContent=
+    `${completed}/${habits.length}`;
+
+    renderStreaks();
+    renderWeekly();
+}
+
+function renderStreaks(){
+
+    const div =
+    document.getElementById("streaks");
+
+    div.innerHTML="";
+
+    habits.forEach(h=>{
+
+        div.innerHTML += `
+        <div class="habit">
+            <span>${h}</span>
+            <span class="streak">
+                🔥 ${streak(h)} ngày
+            </span>
+        </div>
+        `;
+    });
+}
+
+function renderWeekly(){
+
+    const div =
+    document.getElementById("weekly");
+
+    div.innerHTML="";
+
+    habits.forEach(h=>{
+
+        const percent =
+        weeklyPercent(h);
+
+        div.innerHTML += `
+        <div style="margin-top:12px">
+            <div>
+                ${h} (${percent}%)
+            </div>
+
+            <div class="bar">
+                <div
+                class="fill"
+                style="width:${percent}%">
+                </div>
+            </div>
+        </div>
+        `;
+    });
+}
+
+render();
+
+</script>
+
+</body>
+</html>
